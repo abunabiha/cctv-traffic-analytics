@@ -1,0 +1,58 @@
+# Python virtual environment
+.venv/
+venv/
+ENV/
+env/
+
+# Python cache & compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Byte-compiled / optimized / DLL files
+*.manifest
+*.spec
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing & coverage
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# IDE & OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+.Rhistory
+
+# Media recordings and temporary video buffers
+*.mp4
+*.ts
+scratch/
+
+# Sensitive data / credentials
+cookies.txt
+*.log
+
+# Keep sample image assets and doc structure
+!.gitkeep

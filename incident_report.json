@@ -1,0 +1,15 @@
+{
+  "cctv_name": "UNDERPASS UNILA ARAH RAJABASA",
+  "cctv_id": 312,
+  "processed_frames": 100,
+  "elapsed_seconds": 22.41,
+  "vehicle_counts": {
+    "Sepeda Motor": 0,
+    "Mobil": 0,
+    "Bus": 0,
+    "Truk": 0
+  },
+  "total_unique_vehicles": 0,
+  "total_incidents": 0,
+  "incidents": []
+}
