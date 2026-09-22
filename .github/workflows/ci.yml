@@ -68,4 +68,4 @@ jobs:
 
       - name: Verify Container Runtime & Module Integrity
         run: |
-          docker run --rm cctv-traffic-analytics:latest python -c "import streamlit, ultralytics, torch, cv2, pandas, altair; print('Container runtime verification PASSED!')"
+          docker run --rm cctv-traffic-analytics:latest python -c "import streamlit, ultralytics, torch, cv2, pandas, altair, lapx; print('Container runtime verification PASSED!')"
