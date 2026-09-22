@@ -5,6 +5,7 @@
 [![Docker Image](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker)](https://github.com/abunabiha/cctv-traffic-analytics/pkgs/container/cctv-traffic-analytics)
 
 > 🌐 **Live Web Demo:** [https://abunabiha.github.io/cctv-traffic-analytics](https://abunabiha.github.io/cctv-traffic-analytics/)
+> https://cctv-traffic-analytics-dxng8ckzmaseye2oarlank.streamlit.app
 
 Sistem analitik video cerdas (*Intelligent Video Analytics*) berbasis Deep Learning (YOLOv8 + ByteTrack), Transformasi Perspektif Homografi, dan Mesin Aturan Anomali Temporal untuk pemantauan arus lalu lintas, klasifikasi kendaraan Standar Indonesia (Golongan I s.d. VI), penegakan hukum helm ETLE (Golongan VI-A vs VI-B), dan deteksi kecelakaan secara otomatis pada kamera pengawas Kota Bandar Lampung dari portal [Seribu Wajah Kota Bandar Lampung](https://seribuwajah.bandarlampungkota.go.id/list).
 
