@@ -1,5 +1,11 @@
 # Smart CCTV Traffic Analytics & Anomaly Detection - Tri-Lokasi Bandar Lampung
 
+[![GitHub Pages Live Demo](https://img.shields.io/badge/GitHub%20Pages-Live%20Demo%20Active-brightgreen?style=for-the-badge&logo=github)](https://abunabiha.github.io/cctv-traffic-analytics/)
+[![CI/CD Pipeline](https://img.shields.io/badge/CI%2FCD-Passing%20100%25-blue?style=for-the-badge&logo=githubactions)](https://github.com/abunabiha/cctv-traffic-analytics/actions)
+[![Docker Image](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker)](https://github.com/abunabiha/cctv-traffic-analytics/pkgs/container/cctv-traffic-analytics)
+
+> 🌐 **Live Web Demo:** [https://abunabiha.github.io/cctv-traffic-analytics](https://abunabiha.github.io/cctv-traffic-analytics/)
+
 Sistem analitik video cerdas (*Intelligent Video Analytics*) berbasis Deep Learning (YOLOv8 + ByteTrack), Transformasi Perspektif Homografi, dan Mesin Aturan Anomali Temporal untuk pemantauan arus lalu lintas, klasifikasi kendaraan Standar Indonesia (Golongan I s.d. VI), penegakan hukum helm ETLE (Golongan VI-A vs VI-B), dan deteksi kecelakaan secara otomatis pada kamera pengawas Kota Bandar Lampung dari portal [Seribu Wajah Kota Bandar Lampung](https://seribuwajah.bandarlampungkota.go.id/list).
 
 ### 📍 Lokasi Pengamatan (Tri-Lokasi):
