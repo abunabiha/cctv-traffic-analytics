@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart CCTV Multi-Kamera Traffic Analytics & Anomaly Detection | Bandar Lampung</title>
+  <meta name="description" content="Sistem Analitik Cerdas CCTV Lalu Lintas Kota Bandar Lampung: Underpass Unila (ID 312), Simpang Sudirman (ID 282), dan Flyover MBK (ID 190) berbasis YOLOv8, Homografi, dan Deteksi Anomali.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚦</text></svg>">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              900: '#1e3a8a',
+            },
+            surface: {
+              dark: '#0e1117',
+              card: '#161b22',
+              border: '#30363d',
+              accent: '#21262d'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <style>
+    body {
+      background-color: #0e1117;
+      color: #e6edf3;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    /* Custom Scrollbar for Alert Frame */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #161b22;
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #3b82f6;
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #60a5fa;
+    }
+    .hud-box {
+      background: rgba(14, 17, 23, 0.75);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .pulse-dot {
+      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+      animation: pulse 1.8s infinite;
+    }
+    @keyframes pulse {
+      0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+      }
+      70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
+      }
+      100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased">
+
+  <!-- Top Navigation Bar -->
+  <header class="sticky top-0 z-40 bg-[#161b22]/90 backdrop-blur-md border-b border-[#30363d] px-4 lg:px-8 py-3.5">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white text-xl shadow-lg shadow-blue-500/30">
+          <i class="fa-solid fa-video"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-lg font-bold text-white tracking-tight">Smart CCTV Traffic Analytics</h1>
+            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 pulse-dot"></span> LIVE
+            </span>
+          </div>
+          <p class="text-xs text-gray-400">Kota Bandar Lampung &bull; Multi-Kamera (ID 282, 190, 312) &bull; Standar Golongan I - VI</p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-3">
+        <a href="#monitor" class="hidden md:inline-flex text-xs font-medium text-gray-300 hover:text-white px-3 py-1.5 rounded-lg hover:bg-[#21262d] transition">
+          <i class="fa-solid fa-tv mr-1.5 text-blue-400"></i> Monitor
+        </a>
+        <a href="#analytics" class="hidden md:inline-flex text-xs font-medium text-gray-300 hover:text-white px-3 py-1.5 rounded-lg hover:bg-[#21262d] transition">
+          <i class="fa-solid fa-chart-pie mr-1.5 text-indigo-400"></i> Analitik
+        </a>
+        <a href="#incidents" class="hidden md:inline-flex text-xs font-medium text-gray-300 hover:text-white px-3 py-1.5 rounded-lg hover:bg-[#21262d] transition">
+          <i class="fa-solid fa-triangle-exclamation mr-1.5 text-amber-400"></i> Log Anomali
+        </a>
+        <a href="#sdlc" class="hidden md:inline-flex text-xs font-medium text-gray-300 hover:text-white px-3 py-1.5 rounded-lg hover:bg-[#21262d] transition">
+          <i class="fa-solid fa-book mr-1.5 text-purple-400"></i> SDLC & Riset
+        </a>
+        <a href="https://github.com/abunabiha/cctv-traffic-analytics" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-xs font-semibold text-white bg-[#21262d] hover:bg-[#30363d] px-3.5 py-1.5 rounded-lg border border-gray-700 transition">
+          <i class="fa-brands fa-github text-sm"></i> GitHub Repo
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="flex-grow max-w-7xl mx-auto w-full px-4 lg:px-8 py-6 space-y-8">
+
+    <!-- Camera Switcher Buttons -->
+    <section id="monitor" class="space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 class="text-xl font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-camera text-blue-500"></i> Titik Pantau CCTV Lalu Lintas
+          </h2>
+          <p class="text-xs text-gray-400">Pilih titik kamera aktif untuk memuat inferensi model AI, telemetri kecepatan, dan deteksi insiden secara spesifik.</p>
+        </div>
+        <div class="text-xs text-gray-400 bg-[#161b22] px-3 py-1.5 rounded-lg border border-[#30363d]">
+          Model: <span class="text-blue-400 font-semibold">YOLOv8n + ByteTrack</span> &bull; 
+          FPS: <span class="text-emerald-400 font-semibold">25.0 FPS</span> &bull; 
+          Format: <span class="text-purple-400 font-semibold">HLS 720p</span>
+        </div>
+      </div>
+
+      <!-- Camera Selector Tabs -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <button id="cam-btn-282" onclick="selectCamera(282)" class="cam-tab p-4 rounded-xl border text-left transition flex items-center justify-between bg-blue-600/10 border-blue-500 shadow-lg shadow-blue-500/10">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+              <span class="text-xs uppercase tracking-wider text-blue-400 font-bold">CCTV ID 282</span>
+            </div>
+            <h3 class="font-bold text-sm text-white mt-1">CCTV Perempatan Jendral Sudirman</h3>
+            <p class="text-xs text-gray-400 mt-0.5">Simpang Sebidang Bersinyal &bull; 50 km/h</p>
+          </div>
+          <i class="fa-solid fa-chevron-right text-blue-400 text-sm"></i>
+        </button>
+
+        <button id="cam-btn-190" onclick="selectCamera(190)" class="cam-tab p-4 rounded-xl border text-left transition flex items-center justify-between bg-[#161b22] border-[#30363d] hover:border-gray-600">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+              <span class="text-xs uppercase tracking-wider text-gray-400 font-bold">CCTV ID 190</span>
+            </div>
+            <h3 class="font-bold text-sm text-white mt-1">CCTV Flyover Mall Boemi Kedaton</h3>
+            <p class="text-xs text-gray-400 mt-0.5">Jembatan Layang Menerus &bull; 60 km/h</p>
+          </div>
+          <i class="fa-solid fa-chevron-right text-gray-500 text-sm"></i>
+        </button>
+
+        <button id="cam-btn-312" onclick="selectCamera(312)" class="cam-tab p-4 rounded-xl border text-left transition flex items-center justify-between bg-[#161b22] border-[#30363d] hover:border-gray-600">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+              <span class="text-xs uppercase tracking-wider text-gray-400 font-bold">CCTV ID 312</span>
+            </div>
+            <h3 class="font-bold text-sm text-white mt-1">CCTV Unila Arah Rajabasa</h3>
+            <p class="text-xs text-gray-400 mt-0.5">Underpass Dua Jalur &bull; 50 km/h</p>
+          </div>
+          <i class="fa-solid fa-chevron-right text-gray-500 text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Live Video Canvas & Incident Panel Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Left: Interactive Video Player with Bounding Box Overlays (7 Cols) -->
+        <div class="lg:col-span-7 bg-[#161b22] border border-[#30363d] rounded-2xl overflow-hidden shadow-xl">
+          <div class="p-3.5 bg-[#21262d] border-b border-[#30363d] flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+              <h3 id="current-cctv-title" class="text-sm font-bold text-white">CCTV Perempatan Jendral Sudirman</h3>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span id="simulation-badge" class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                AI INFERENCE ACTIVE
+              </span>
+              <button onclick="toggleBoundingBoxes()" id="toggle-bbox-btn" class="px-2 py-1 text-xs bg-[#161b22] hover:bg-[#30363d] text-gray-300 rounded border border-[#30363d] transition">
+                <i class="fa-solid fa-draw-polygon mr-1 text-blue-400"></i> Bounding Box
+              </button>
+            </div>
+          </div>
+
+          <!-- Video Viewport Container -->
+          <div class="relative w-full aspect-video bg-black flex items-center justify-center overflow-hidden select-none">
+            <img id="cctv-image" src="images/sudirman.jpg" alt="Live CCTV Feed" class="w-full h-full object-cover transition duration-300">
+
+            <!-- Simulated SVG Overlays for Bounding Boxes, Speed & ETLE Tags -->
+            <svg id="cctv-overlay" class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 1280 720" preserveAspectRatio="none">
+              <!-- Dynamically populated via JS -->
+            </svg>
+
+            <!-- Bottom HUD Controls -->
+            <div class="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-auto">
+              <div class="hud-box px-3 py-1.5 rounded-lg text-xs font-mono text-gray-200 flex items-center gap-3">
+                <span><i class="fa-solid fa-location-crosshairs text-red-400 mr-1"></i><span id="hud-coords">-5.4192, 105.2581</span></span>
+                <span class="text-gray-500">|</span>
+                <span><i class="fa-solid fa-gauge-high text-yellow-400 mr-1"></i>V-Limit: <span id="hud-vlimit">50 km/h</span></span>
+                <span class="text-gray-500">|</span>
+                <span><i class="fa-solid fa-car text-cyan-400 mr-1"></i>Tracked: <span id="hud-active-tracks">7 Kendaraan</span></span>
+              </div>
+
+              <div class="hud-box px-2.5 py-1 rounded-lg text-xs flex items-center gap-2">
+                <button onclick="changeFrameSimulation()" class="text-gray-300 hover:text-white transition px-2 py-1 bg-white/10 rounded" title="Refresh/Ubah Frame">
+                  <i class="fa-solid fa-rotate mr-1 text-blue-400"></i> Simulasi
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Legend Bar -->
+          <div class="p-3 bg-[#161b22] border-t border-[#30363d] flex flex-wrap items-center justify-between text-xs text-gray-400 gap-2">
+            <div class="flex items-center gap-3 flex-wrap">
+              <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-cyan-400"></span> Gol. I (Mobil)</span>
+              <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-emerald-400"></span> Gol. VI-A (Motor Helm)</span>
+              <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-red-500"></span> Gol. VI-B (Tanpa Helm)</span>
+              <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-amber-400"></span> Gol. II-V (Bus/Truk)</span>
+            </div>
+            <span class="text-[11px] text-gray-500">Kamera Resmi API Pemkot Bandar Lampung</span>
+          </div>
+        </div>
+
+        <!-- Right: Log Anomali & Insiden (5 Cols) - CONTAINER FRAME DENGAN INTERNAL SCROLLBAR -->
+        <div class="lg:col-span-5 bg-[#161b22] border border-[#30363d] rounded-2xl overflow-hidden shadow-xl flex flex-col">
+          <div class="p-3.5 bg-[#21262d] border-b border-[#30363d] flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <i class="fa-solid fa-triangle-exclamation text-amber-400 text-sm"></i>
+              <h3 class="text-sm font-bold text-white">Log Anomali & Insiden</h3>
+              <span id="incident-count-badge" class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                50 Terakhir
+              </span>
+            </div>
+            <!-- Filter Dropdown -->
+            <select id="incident-filter" onchange="filterIncidents()" class="text-xs bg-[#161b22] text-gray-200 border border-[#30363d] rounded-lg px-2 py-1 focus:outline-none focus:border-blue-500">
+              <option value="ALL">Semua Insiden</option>
+              <option value="KENDARAAN_BERHENTI">Kendaraan Berhenti</option>
+              <option value="PELANGGARAN_HELM">ETLE Tanpa Helm</option>
+              <option value="LAWAN_ARAH">Lawan Arah</option>
+              <option value="MOTOR_JATUH">Motor Jatuh</option>
+              <option value="TABRAKAN">Tabrakan</option>
+            </select>
+          </div>
+
+          <!-- FIXED-HEIGHT SCROLLABLE FRAME (Mencegah Layar Bergulung ke Bawah) -->
+          <div id="incident-frame-container" class="custom-scrollbar overflow-y-auto divide-y divide-[#30363d]/60 p-2" style="max-height: 480px; min-height: 480px;">
+            <!-- Incidents will be dynamically rendered here -->
+            <div class="flex items-center justify-center h-full text-xs text-gray-500 py-12">
+              <i class="fa-solid fa-circle-notch fa-spin text-blue-500 mr-2"></i> Memuat log insiden telemetri...
+            </div>
+          </div>
+
+          <!-- Incident Footer Status -->
+          <div class="p-2.5 bg-[#21262d] border-t border-[#30363d] flex items-center justify-between text-xs text-gray-400">
+            <span class="flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Sistem Monitoring Siap
+            </span>
+            <span class="text-[11px] text-gray-500">Auto-refresh setiap 5s</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Real-time KPI Metric Cards Section -->
+    <section class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <!-- Metric 1: Total Volume -->
+      <div class="bg-[#161b22] border border-[#30363d] p-4 rounded-xl relative overflow-hidden">
+        <div class="text-xs font-medium text-gray-400 mb-1 flex items-center justify-between">
+          <span>Total Deteksi</span>
+          <i class="fa-solid fa-car text-blue-400"></i>
+        </div>
+        <div id="kpi-total-veh" class="text-xl font-bold text-white">4,731</div>
+        <p class="text-[11px] text-emerald-400 mt-1 flex items-center">
+          <i class="fa-solid fa-arrow-trend-up mr-1"></i> Akumulasi Kendaraan
+        </p>
+      </div>
+
+      <!-- Metric 2: Mean Speed -->
+      <div class="bg-[#161b22] border border-[#30363d] p-4 rounded-xl relative overflow-hidden">
+        <div class="text-xs font-medium text-gray-400 mb-1 flex items-center justify-between">
+          <span>Kecepatan Rerata</span>
+          <i class="fa-solid fa-gauge text-cyan-400"></i>
+        </div>
+        <div id="kpi-mean-speed" class="text-xl font-bold text-white">8.6 <span class="text-xs font-normal text-gray-400">km/h</span></div>
+        <p class="text-[11px] text-gray-400 mt-1">Rata-rata Simpang</p>
+      </div>
+
+      <!-- Metric 3: V85 Speed -->
+      <div class="bg-[#161b22] border border-[#30363d] p-4 rounded-xl relative overflow-hidden">
+        <div class="text-xs font-medium text-gray-400 mb-1 flex items-center justify-between">
+          <span>Kecepatan V85</span>
+          <i class="fa-solid fa-bolt text-yellow-400"></i>
+        </div>
+        <div id="kpi-v85" class="text-xl font-bold text-white">12.5 <span class="text-xs font-normal text-gray-400">km/h</span></div>
+        <p class="text-[11px] text-yellow-400 mt-1">85% Arus Kendaraan</p>
+      </div>
+
+      <!-- Metric 4: LOS -->
+      <div class="bg-[#161b22] border border-[#30363d] p-4 rounded-xl relative overflow-hidden">
+        <div class="text-xs font-medium text-gray-400 mb-1 flex items-center justify-between">
+          <span>Level of Service</span>
+          <i class="fa-solid fa-traffic-light text-purple-400"></i>
+        </div>
+        <div id="kpi-los" class="text-base font-bold text-emerald-400">C (Arus Stabil)</div>
+        <p class="text-[11px] text-gray-400 mt-1">Kapasitas Simpang</p>
+      </div>
+
+      <!-- Metric 5: Kepatuhan Helm -->
+      <div class="bg-[#161b22] border border-[#30363d] p-4 rounded-xl relative overflow-hidden">
+        <div class="text-xs font-medium text-gray-400 mb-1 flex items-center justify-between">
+          <span>Kepatuhan Helm</span>
+          <i class="fa-solid fa-helmet-safety text-emerald-400"></i>
+        </div>
+        <div id="kpi-helmet" class="text-xl font-bold text-emerald-400">64.9%</div>
+        <p class="text-[11px] text-gray-400 mt-1">ETLE Golongan VI</p>
+      </div>
+
+      <!-- Metric 6: Total Insiden -->
+      <div class="bg-[#161b22] border border-[#30363d] p-4 rounded-xl relative overflow-hidden">
+        <div class="text-xs font-medium text-gray-400 mb-1 flex items-center justify-between">
+          <span>Total Insiden</span>
+          <i class="fa-solid fa-shield-halved text-red-400"></i>
+        </div>
+        <div id="kpi-incidents" class="text-xl font-bold text-red-400">164</div>
+        <p class="text-[11px] text-red-400 mt-1">Anomali Terdeteksi</p>
+      </div>
+    </section>
+
+    <!-- Analytics Charts Section -->
+    <section id="analytics" class="space-y-4">
+      <div>
+        <h2 class="text-xl font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-chart-line text-indigo-400"></i> Analitik Rekayasa Transportasi & Klasifikasi Kendaraan
+        </h2>
+        <p class="text-xs text-gray-400">Visualisasi data empiris berdasarkan agregasi ribuan deteksi di 3 koridor utama Kota Bandar Lampung.</p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Chart 1: Komposisi Klasifikasi Kendaraan Golongan I s.d. VI -->
+        <div class="bg-[#161b22] border border-[#30363d] rounded-2xl p-5 shadow-lg">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-chart-pie text-blue-400"></i> Komposisi Golongan Kendaraan (Standar Indonesia)
+              </h3>
+              <p class="text-xs text-gray-400">Distribusi proporsi Golongan I, II, III, IV, V, VI-A, dan VI-B</p>
+            </div>
+            <span class="text-xs bg-[#21262d] px-2.5 py-1 rounded text-gray-300 font-mono">10,547 Sampel</span>
+          </div>
+          <div class="h-64 relative">
+            <canvas id="chart-classification"></canvas>
+          </div>
+          <div class="mt-4 pt-3 border-t border-[#30363d] grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
+            <div class="p-2 rounded-lg bg-[#21262d]">
+              <span class="text-gray-400 block text-[11px]">Golongan I (Mobil)</span>
+              <span class="text-sm font-bold text-cyan-400">54.6%</span>
+            </div>
+            <div class="p-2 rounded-lg bg-[#21262d]">
+              <span class="text-gray-400 block text-[11px]">Gol. VI-A (Taat Helm)</span>
+              <span class="text-sm font-bold text-emerald-400">26.9%</span>
+            </div>
+            <div class="p-2 rounded-lg bg-[#21262d]">
+              <span class="text-gray-400 block text-[11px]">Gol. VI-B (Tanpa Helm)</span>
+              <span class="text-sm font-bold text-red-400">14.5%</span>
+            </div>
+            <div class="p-2 rounded-lg bg-[#21262d]">
+              <span class="text-gray-400 block text-[11px]">Gol. II-V (Bus & Truk)</span>
+              <span class="text-sm font-bold text-amber-400">4.0%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chart 2: Distribusi Kecepatan & Persentil 85 (V85) -->
+        <div class="bg-[#161b22] border border-[#30363d] rounded-2xl p-5 shadow-lg">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-chart-column text-emerald-400"></i> Distribusi Kecepatan & Persentil ke-85 (V85)
+              </h3>
+              <p class="text-xs text-gray-400">Evaluasi batas kecepatan desain jalan (Speed Zoning 50/60 km/h)</p>
+            </div>
+            <span class="text-xs bg-[#21262d] px-2.5 py-1 rounded text-yellow-400 font-mono font-bold">V85: 12.5 km/h</span>
+          </div>
+          <div class="h-64 relative">
+            <canvas id="chart-speed"></canvas>
+          </div>
+          <div class="mt-4 pt-3 border-t border-[#30363d] flex items-center justify-between text-xs text-gray-400">
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-blue-500"></span> Frekuensi Kecepatan</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-yellow-400"></span> Garis Ambang Batas V85</span>
+            <span class="text-[11px] text-gray-500">Metode Homografi Proyektif 4-Titik</span>
+          </div>
+        </div>
+
+        <!-- Chart 3: Fluktuasi Beban Lalu Lintas 24 Jam -->
+        <div class="bg-[#161b22] border border-[#30363d] rounded-2xl p-5 shadow-lg">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-clock text-purple-400"></i> Profil Fluktuasi Volume Kendaraan Per Jam (24 Jam)
+              </h3>
+              <p class="text-xs text-gray-400">Puncak pagi (07:00-09:00) dan puncak sore (16:00-18:00)</p>
+            </div>
+            <span class="text-xs bg-purple-500/20 text-purple-400 px-2.5 py-1 rounded font-mono font-bold">Peak: 17:00</span>
+          </div>
+          <div class="h-64 relative">
+            <canvas id="chart-hourly"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 4: Komparasi Karakteristik 3 Titik Pantau -->
+        <div class="bg-[#161b22] border border-[#30363d] rounded-2xl p-5 shadow-lg">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-scale-balanced text-amber-400"></i> Komparasi Kinerja Lalu Lintas Tri-Lokasi
+              </h3>
+              <p class="text-xs text-gray-400">Perbandingan volume, kepatuhan helm, dan insiden antar titik kamera</p>
+            </div>
+            <span class="text-xs bg-[#21262d] px-2.5 py-1 rounded text-gray-300 font-mono">3 Koridor</span>
+          </div>
+          <div class="h-64 relative">
+            <canvas id="chart-comparison"></canvas>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SDLC & Research Methodology Section -->
+    <section id="sdlc" class="space-y-4">
+      <div>
+        <h2 class="text-xl font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-microchip text-purple-400"></i> Arsitektur Sistem & Metodologi Penelitian SDLC
+        </h2>
+        <p class="text-xs text-gray-400">Standarisasi rekayasa perangkat lunak berbasis SDLC IEEE/ISO 12207 dan IEEE 829 untuk publikasi jurnal ilmiah internasional.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-[#161b22] border border-[#30363d] p-5 rounded-xl">
+          <div class="w-9 h-9 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center text-lg mb-3">
+            <i class="fa-solid fa-eye"></i>
+          </div>
+          <h3 class="font-bold text-sm text-white">1. Vision & Tracking Pipeline</h3>
+          <p class="text-xs text-gray-400 mt-1 leading-relaxed">
+            Inference engine memanfaatkan model <strong>YOLOv8n</strong> dengan resolusi 1280x720 dikombinasikan dengan algoritma pelacakan <strong>ByteTrack & BOTSORT</strong> (via pustaka C LAP solver <code class="text-blue-300">lapx</code>) untuk persistensi ID kendaraan melintasi oklusi.
+          </p>
+        </div>
+
+        <div class="bg-[#161b22] border border-[#30363d] p-5 rounded-xl">
+          <div class="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-lg mb-3">
+            <i class="fa-solid fa-compass-drafting"></i>
+          </div>
+          <h3 class="font-bold text-sm text-white">2. Homografi Proyektif 4-Titik</h3>
+          <p class="text-xs text-gray-400 mt-1 leading-relaxed">
+            Transformasi bidang citra 2D perspektif ke koordinat permukaan jalan riil (meter) menggunakan matriks homografi $3 \times 3$ berbobot determinan terbalik:
+            <code class="text-emerald-300 block mt-1">s = (&Delta;d / &Delta;t) &times; 3.6 [km/h]</code>
+          </p>
+        </div>
+
+        <div class="bg-[#161b22] border border-[#30363d] p-5 rounded-xl">
+          <div class="w-9 h-9 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center text-lg mb-3">
+            <i class="fa-solid fa-shield-virus"></i>
+          </div>
+          <h3 class="font-bold text-sm text-white">3. Mesin Deteksi 5 Anomali Cerdas</h3>
+          <p class="text-xs text-gray-400 mt-1 leading-relaxed">
+            Deteksi berbasis aturan fisika waktu-nyata: kendaraan berhenti (&Delta;t &gt; 3s, speed &lt; 2km/h), lawan arah median, sepeda motor roboh (inversi rasio aspek &gt; 1.3), tabrakan (IoU &gt; 0.35 & deselerasi tajam), serta ETLE helm.
+          </p>
+        </div>
+      </div>
+
+      <!-- SDLC Documentation Links Banner -->
+      <div class="bg-gradient-to-r from-blue-900/30 via-purple-900/20 to-transparent border border-blue-500/30 rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-file-lines text-blue-400"></i> Berkas Dokumentasi Lengkap SDLC (01 - 05)
+          </h3>
+          <p class="text-xs text-gray-300 mt-1">Tersedia dokumen SRS, SDD, Formulasi Matematis, dan STD (Testing 16/16 Passed) di repositori resmi.</p>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <a href="https://github.com/abunabiha/cctv-traffic-analytics/tree/main/SDLC_DOCS" target="_blank" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition flex items-center gap-2 shadow-lg shadow-blue-500/20">
+            <i class="fa-solid fa-folder-open"></i> Buka Folder SDLC_DOCS
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Docker Deployment Card -->
+    <section class="bg-[#161b22] border border-[#30363d] rounded-2xl p-6 shadow-xl space-y-3">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div>
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <i class="fa-brands fa-docker text-blue-400"></i> Menjalankan Aplikasi via Docker Container
+          </h3>
+          <p class="text-xs text-gray-400">Aplikasi siap dijalankan di server atau PC lokal dengan container terverifikasi CI/CD.</p>
+        </div>
+        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+          <i class="fa-solid fa-check text-[10px]"></i> CI/CD Verified
+        </span>
+      </div>
+
+      <div class="bg-[#0e1117] rounded-xl p-3.5 border border-[#30363d] flex items-center justify-between font-mono text-xs text-emerald-400 overflow-x-auto">
+        <code>docker run -d -p 8501:8501 --name cctv-app ghcr.io/abunabiha/cctv-traffic-analytics:latest</code>
+        <button onclick="navigator.clipboard.writeText('docker run -d -p 8501:8501 --name cctv-app cctv-traffic-analytics:latest'); alert('Perintah docker berhasil disalin!')" class="ml-3 px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-gray-300 rounded text-xs font-sans transition flex items-center gap-1.5">
+          <i class="fa-regular fa-copy"></i> Salin
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modal Detail Insiden -->
+  <div id="incident-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-[#161b22] border border-[#30363d] rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl animate-fade-in">
+      <div class="p-4 bg-[#21262d] border-b border-[#30363d] flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <span id="modal-severity-badge" class="px-2 py-0.5 rounded text-xs font-bold bg-red-500/20 text-red-400 border border-red-500/30">CRITICAL</span>
+          <h4 id="modal-title" class="text-sm font-bold text-white">Detail Insiden</h4>
+        </div>
+        <button onclick="closeIncidentModal()" class="text-gray-400 hover:text-white transition text-lg">&times;</button>
+      </div>
+      <div class="p-5 space-y-4">
+        <div class="w-full h-48 rounded-xl bg-black overflow-hidden relative border border-[#30363d]">
+          <img id="modal-image" src="images/sudirman.jpg" alt="Bukti Tangkapan Layar Insiden" class="w-full h-full object-cover">
+          <div class="absolute bottom-2 left-2 px-2.5 py-1 bg-black/70 backdrop-blur rounded text-[11px] font-mono text-red-400">
+            Bukti Tangkapan Otomatis AI
+          </div>
+        </div>
+        <div class="space-y-2 text-xs">
+          <div class="flex justify-between py-1 border-b border-[#30363d]">
+            <span class="text-gray-400">Waktu Kejadian:</span>
+            <span id="modal-time" class="text-white font-mono font-semibold">-</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#30363d]">
+            <span class="text-gray-400">Lokasi CCTV:</span>
+            <span id="modal-location" class="text-white font-semibold">-</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#30363d]">
+            <span class="text-gray-400">Klasifikasi & Track ID:</span>
+            <span id="modal-vehicle" class="text-blue-400 font-semibold">-</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-[#30363d]">
+            <span class="text-gray-400">Kecepatan Terestimasi:</span>
+            <span id="modal-speed" class="text-yellow-400 font-semibold">-</span>
+          </div>
+          <div class="pt-1">
+            <span class="text-gray-400 block mb-1">Keterangan / Temuan:</span>
+            <p id="modal-desc" class="text-gray-200 bg-[#21262d] p-3 rounded-lg border border-[#30363d] leading-relaxed">-</p>
+          </div>
+        </div>
+      </div>
+      <div class="p-4 bg-[#21262d] border-t border-[#30363d] flex justify-end">
+        <button onclick="closeIncidentModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition">
+          Tutup
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="bg-[#161b22] border-t border-[#30363d] py-6 px-4 text-center text-xs text-gray-500">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+      <p>&copy; 2026 Smart CCTV Traffic Analytics &bull; Disertasi Doktor Rekayasa Lalu Lintas Bandar Lampung</p>
+      <div class="flex items-center space-x-4">
+        <a href="https://github.com/abunabiha/cctv-traffic-analytics" target="_blank" class="hover:text-gray-300 transition">Repository</a>
+        <a href="https://github.com/abunabiha/cctv-traffic-analytics/actions" target="_blank" class="hover:text-gray-300 transition">CI/CD Pipeline</a>
+        <a href="https://github.com/abunabiha/cctv-traffic-analytics/blob/main/LICENSE" target="_blank" class="hover:text-gray-300 transition">Lisensi MIT</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Embedded JSON Data & Core Application Script -->
+  <script>
+    let trafficData = null;
+    let currentCameraId = 282;
+    let showBoundingBoxes = true;
+    let frameSimulationIndex = 0;
+
+    // Simulated Bounding Boxes per Camera for Interactive Showcase
+    const cameraDetections = {
+      282: [
+        { id: 101, class: "Mobil (Gol. I)", bbox: [330, 190, 85, 45], speed: 18.4, color: "#38bdf8", etle: null },
+        { id: 102, class: "Mobil (Gol. I)", bbox: [145, 160, 50, 25], speed: 0.0, color: "#38bdf8", etle: null, status: "BERHENTI" },
+        { id: 103, class: "Motor Helm (VI-A)", bbox: [610, 170, 55, 110], speed: 32.1, color: "#34d399", etle: "TAAT_HELM" },
+        { id: 104, class: "Motor Tanpa Helm (VI-B)", bbox: [490, 180, 80, 50], speed: 28.5, color: "#ef4444", etle: "TANPA_HELM" },
+        { id: 105, class: "Bus Kecil (Gol. II)", bbox: [780, 220, 120, 80], speed: 14.2, color: "#fbbf24", etle: null }
+      ],
+      190: [
+        { id: 201, class: "Mobil (Gol. I)", bbox: [400, 250, 110, 70], speed: 45.2, color: "#38bdf8", etle: null },
+        { id: 202, class: "Mobil (Gol. I)", bbox: [580, 290, 130, 85], speed: 52.0, color: "#38bdf8", etle: null },
+        { id: 203, class: "Motor Helm (VI-A)", bbox: [310, 280, 45, 80], speed: 41.5, color: "#34d399", etle: "TAAT_HELM" },
+        { id: 204, class: "Truk Ringan (Gol. II)", bbox: [720, 310, 160, 110], speed: 38.0, color: "#fbbf24", etle: null }
+      ],
+      312: [
+        { id: 301, class: "Mobil (Gol. I)", bbox: [380, 350, 140, 90], speed: 58.4, color: "#38bdf8", etle: null },
+        { id: 302, class: "Motor Helm (VI-A)", bbox: [560, 380, 55, 95], speed: 46.1, color: "#34d399", etle: "TAAT_HELM" },
+        { id: 303, class: "Mobil (Gol. I)", bbox: [250, 290, 95, 60], speed: 54.7, color: "#38bdf8", etle: null }
+      ]
+    };
+
+    // Initialize Application
+    document.addEventListener("DOMContentLoaded", async () => {
+      try {
+        const response = await fetch('data/traffic_data.json');
+        if (response.ok) {
+          trafficData = await response.json();
+        }
+      } catch (e) {
+        console.warn("Using bundled fallback datasets", e);
+      }
+      
+      initCharts();
+      renderCurrentCamera();
+      renderIncidentFeed();
+    });
+
+    // Camera Switcher Function
+    function selectCamera(camId) {
+      currentCameraId = camId;
+
+      // Update button styles
+      [282, 190, 312].forEach(id => {
+        const btn = document.getElementById(`cam-btn-${id}`);
+        if (id === camId) {
+          btn.className = "cam-tab p-4 rounded-xl border text-left transition flex items-center justify-between bg-blue-600/10 border-blue-500 shadow-lg shadow-blue-500/10";
+          btn.querySelector("i").className = "fa-solid fa-chevron-right text-blue-400 text-sm";
+        } else {
+          btn.className = "cam-tab p-4 rounded-xl border text-left transition flex items-center justify-between bg-[#161b22] border-[#30363d] hover:border-gray-600";
+          btn.querySelector("i").className = "fa-solid fa-chevron-right text-gray-500 text-sm";
+        }
+      });
+
+      renderCurrentCamera();
+      filterIncidents();
+    }
+
+    function renderCurrentCamera() {
+      const imgElem = document.getElementById('cctv-image');
+      const titleElem = document.getElementById('current-cctv-title');
+      const coordsElem = document.getElementById('hud-coords');
+      const vlimitElem = document.getElementById('hud-vlimit');
+      const tracksElem = document.getElementById('hud-active-tracks');
+
+      const camMeta = {
+        282: { title: "CCTV Perempatan Jendral Sudirman", img: "images/sudirman.jpg", coords: "-5.4192, 105.2581", limit: "50 km/h" },
+        190: { title: "CCTV Flyover Mall Boemi Kedaton", img: "images/mbk.jpg", coords: "-5.3814, 105.2589", limit: "60 km/h" },
+        312: { title: "CCTV Unila Arah Rajabasa", img: "images/unila.jpg", coords: "-5.3644, 105.2443", limit: "50 km/h" }
+      }[currentCameraId];
+
+      titleElem.textContent = camMeta.title;
+      imgElem.src = camMeta.img;
+      coordsElem.textContent = camMeta.coords;
+      vlimitElem.textContent = camMeta.limit;
+
+      // Update KPI metrics according to camera
+      if (trafficData && trafficData.cameras && trafficData.cameras[currentCameraId]) {
+        const c = trafficData.cameras[currentCameraId];
+        document.getElementById('kpi-total-veh').textContent = c.total_detections.toLocaleString();
+        document.getElementById('kpi-mean-speed').innerHTML = `${c.mean_speed} <span class="text-xs font-normal text-gray-400">km/h</span>`;
+        document.getElementById('kpi-v85').innerHTML = `${c.v85_speed} <span class="text-xs font-normal text-gray-400">km/h</span>`;
+        document.getElementById('kpi-los').textContent = c.los;
+        document.getElementById('kpi-helmet').textContent = `${c.helmet_rate}%`;
+        document.getElementById('kpi-incidents').textContent = c.incidents_count;
+      }
+
+      renderBoundingBoxes();
+    }
+
+    function renderBoundingBoxes() {
+      const svg = document.getElementById('cctv-overlay');
+      svg.innerHTML = '';
+      if (!showBoundingBoxes) return;
+
+      const dets = cameraDetections[currentCameraId] || [];
+      document.getElementById('hud-active-tracks').textContent = `${dets.length} Kendaraan`;
+
+      dets.forEach(d => {
+        const [x, y, w, h] = d.bbox;
+
+        // Bounding Box Rect
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute("x", x);
+        rect.setAttribute("y", y);
+        rect.setAttribute("width", w);
+        rect.setAttribute("height", h);
+        rect.setAttribute("fill", "none");
+        rect.setAttribute("stroke", d.color);
+        rect.setAttribute("stroke-width", "2.5");
+        rect.setAttribute("rx", "4");
+        svg.appendChild(rect);
+
+        // Label Background
+        const labelBg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        labelBg.setAttribute("x", x);
+        labelBg.setAttribute("y", Math.max(0, y - 22));
+        labelBg.setAttribute("width", Math.max(w, 110));
+        labelBg.setAttribute("height", 20);
+        labelBg.setAttribute("fill", d.color);
+        labelBg.setAttribute("rx", "3");
+        svg.appendChild(labelBg);
+
+        // Label Text
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("x", x + 4);
+        text.setAttribute("y", Math.max(14, y - 7));
+        text.setAttribute("fill", "#000");
+        text.setAttribute("font-size", "11");
+        text.setAttribute("font-family", "monospace");
+        text.setAttribute("font-weight", "bold");
+        text.textContent = `#${d.id} ${d.class} | ${d.speed}km/h`;
+        svg.appendChild(text);
+
+        // ETLE Tag if present
+        if (d.etle) {
+          const etleBg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+          etleBg.setAttribute("x", x);
+          etleBg.setAttribute("y", y + h + 2);
+          etleBg.setAttribute("width", d.etle === "TAAT_HELM" ? 85 : 95);
+          etleBg.setAttribute("height", 16);
+          etleBg.setAttribute("fill", d.etle === "TAAT_HELM" ? "rgba(16,185,129,0.9)" : "rgba(239,68,68,0.9)");
+          etleBg.setAttribute("rx", "3");
+          svg.appendChild(etleBg);
+
+          const etleText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          etleText.setAttribute("x", x + 4);
+          etleText.setAttribute("y", y + h + 14);
+          etleText.setAttribute("fill", "#fff");
+          etleText.setAttribute("font-size", "10");
+          etleText.setAttribute("font-weight", "bold");
+          etleText.textContent = d.etle === "TAAT_HELM" ? "ETLE: HELM ✓" : "ETLE: NO HELM ✗";
+          svg.appendChild(etleText);
+        }
+      });
+    }
+
+    function toggleBoundingBoxes() {
+      showBoundingBoxes = !showBoundingBoxes;
+      const btn = document.getElementById('toggle-bbox-btn');
+      if (showBoundingBoxes) {
+        btn.innerHTML = '<i class="fa-solid fa-draw-polygon mr-1 text-blue-400"></i> Bounding Box';
+      } else {
+        btn.innerHTML = '<i class="fa-solid fa-eye-slash mr-1 text-gray-500"></i> Sembunyikan';
+      }
+      renderBoundingBoxes();
+    }
+
+    function changeFrameSimulation() {
+      const dets = cameraDetections[currentCameraId];
+      if (dets) {
+        dets.forEach(d => {
+          d.speed = Math.max(0, Math.round((d.speed + (Math.random() * 6 - 3)) * 10) / 10);
+        });
+        renderBoundingBoxes();
+      }
+    }
+
+    // Render Incident List inside Dedicated Frame Container
+    function renderIncidentFeed(filterType = "ALL") {
+      const container = document.getElementById('incident-frame-container');
+      container.innerHTML = '';
+
+      let incidents = (trafficData && trafficData.incidents) ? trafficData.incidents : [
+        { incident_id: "ALT-001", time: "2026-09-22 19:42:48", location_id: 282, location_name: "Perempatan Jl. Jendral Sudirman", type: "PELANGGARAN_HELM", severity: "WARNING", track_id: 5001, golongan: "Golongan VI-B", speed: 0.0, title: "ETLE: Pengendara Motor Tanpa Helm (#5001)", description: "Sepeda motor #5001 terdeteksi melanggar aturan lalu lintas (tidak mengenakan helm keselamatan SNI)." },
+        { incident_id: "ALT-002", time: "2026-09-22 19:42:43", location_id: 282, location_name: "Perempatan Jl. Jendral Sudirman", type: "KENDARAAN_BERHENTI", severity: "WARNING", track_id: 1, golongan: "Golongan VI-A", speed: 0.0, title: "Kendaraan Berhenti di Underpass (Sepeda Motor #1)", description: "Sepeda Motor #1 terhenti di badan jalan jalur utama selama > 3.0 detik." },
+        { incident_id: "ALT-003", time: "2026-09-22 19:15:20", location_id: 190, location_name: "Flyover Mall Boemi Kedaton", type: "LAWAN_ARAH", severity: "CRITICAL", track_id: 88, golongan: "Golongan I", speed: 22.4, title: "BAHAYA: Kendaraan Lawan Arah! (#88)", description: "Mobil #88 terdeteksi melaju berlawanan arah dari arus resmi jalan layang." },
+        { incident_id: "ALT-004", time: "2026-09-22 18:50:11", location_id: 312, location_name: "Underpass Unila", type: "MOTOR_JATUH", severity: "CRITICAL", track_id: 30, golongan: "Golongan VI", speed: 0.0, title: "KECELAKAAN: Sepeda Motor Terjatuh! (#30)", description: "Sepeda motor #30 mengalami inversi rasio aspek (rebah) dengan deselerasi mendadak di underpass." },
+        { incident_id: "ALT-005", time: "2026-09-22 18:30:05", location_id: 282, location_name: "Perempatan Jl. Jendral Sudirman", type: "TABRAKAN", severity: "CRITICAL", track_id: 42, golongan: "Golongan I", speed: 0.0, title: "KECELAKAAN: Tabrakan Antar Kendaraan (#41 & #42)", description: "Dua mobil terdeteksi tumpang tindih bounding box (IoU > 0.35) diikuti deselerasi mendadak." }
+      ];
+
+      if (filterType !== "ALL") {
+        incidents = incidents.filter(i => i.type === filterType);
+      }
+
+      document.getElementById('incident-count-badge').textContent = `${incidents.length} Kejadian`;
+
+      if (incidents.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12 text-gray-400 text-xs">
+            <i class="fa-solid fa-check-circle text-emerald-400 text-xl mb-2 block"></i>
+            Tidak ada insiden dengan kategori ini untuk saat ini.
+          </div>
+        `;
+        return;
+      }
+
+      incidents.forEach(item => {
+        const div = document.createElement('div');
+        div.className = "p-3 hover:bg-[#21262d] transition cursor-pointer flex items-start justify-between gap-3 group";
+        div.onclick = () => openIncidentModal(item);
+
+        const badgeClass = item.severity === 'CRITICAL' ? 'bg-red-500/20 text-red-400 border-red-500/40' :
+                           item.severity === 'WARNING' ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' :
+                           'bg-blue-500/20 text-blue-400 border-blue-500/40';
+
+        const iconClass = item.type === 'TABRAKAN' ? 'fa-car-burst text-red-400' :
+                          item.type === 'MOTOR_JATUH' ? 'fa-person-falling-burst text-orange-400' :
+                          item.type === 'LAWAN_ARAH' ? 'fa-arrows-split-up-and-left text-red-400' :
+                          item.type === 'PELANGGARAN_HELM' ? 'fa-helmet-safety text-amber-400' :
+                          'fa-hand text-yellow-400';
+
+        div.innerHTML = `
+          <div class="flex items-start space-x-2.5">
+            <div class="w-8 h-8 rounded-lg bg-[#161b22] border border-[#30363d] flex items-center justify-center text-sm mt-0.5 group-hover:border-blue-500 transition">
+              <i class="fa-solid ${iconClass}"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="px-1.5 py-0.2 rounded text-[10px] font-bold border ${badgeClass}">
+                  ${item.severity}
+                </span>
+                <span class="text-[11px] font-mono text-gray-400">${item.time}</span>
+              </div>
+              <h4 class="text-xs font-bold text-white mt-1 group-hover:text-blue-400 transition">${item.title}</h4>
+              <p class="text-[11px] text-gray-400 line-clamp-1 mt-0.5">${item.description}</p>
+            </div>
+          </div>
+          <button class="px-2 py-1 text-[10px] bg-[#161b22] group-hover:bg-blue-600 text-gray-300 group-hover:text-white rounded border border-[#30363d] group-hover:border-blue-500 transition whitespace-nowrap">
+            Bukti
+          </button>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function filterIncidents() {
+      const val = document.getElementById('incident-filter').value;
+      renderIncidentFeed(val);
+    }
+
+    // Modal Details Logic
+    function openIncidentModal(item) {
+      document.getElementById('modal-title').textContent = item.title;
+      document.getElementById('modal-time').textContent = item.time;
+      document.getElementById('modal-location').textContent = item.location_name || `CCTV ID ${item.location_id}`;
+      document.getElementById('modal-vehicle').textContent = `${item.golongan} (Track ID #${item.track_id || '-'})`;
+      document.getElementById('modal-speed').textContent = `${item.speed} km/h`;
+      document.getElementById('modal-desc').textContent = item.description;
+
+      const badge = document.getElementById('modal-severity-badge');
+      badge.textContent = item.severity;
+      badge.className = item.severity === 'CRITICAL' ? 'px-2 py-0.5 rounded text-xs font-bold bg-red-500/20 text-red-400 border border-red-500/30' :
+                        'px-2 py-0.5 rounded text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30';
+
+      const img = document.getElementById('modal-image');
+      img.src = item.location_id === 190 ? 'images/mbk.jpg' :
+                item.location_id === 312 ? 'images/unila.jpg' : 'images/sudirman.jpg';
+
+      document.getElementById('incident-modal').classList.remove('hidden');
+    }
+
+    function closeIncidentModal() {
+      document.getElementById('incident-modal').classList.add('hidden');
+    }
+
+    // Initialize Interactive Chart.js Visualizations
+    function initCharts() {
+      Chart.defaults.color = '#8b949e';
+      Chart.defaults.borderColor = '#30363d';
+
+      // 1. Classification Donut Chart
+      const ctx1 = document.getElementById('chart-classification').getContext('2d');
+      new Chart(ctx1, {
+        type: 'doughnut',
+        data: {
+          labels: ['Gol. I (Mobil)', 'Gol. II (Bus Kecil/Truk)', 'Gol. III (Bus/Truk Sedang)', 'Gol. IV (Truk Besar)', 'Gol. V (Truk Gandeng)', 'Gol. VI-A (Motor Helm)', 'Gol. VI-B (Tanpa Helm)'],
+          datasets: [{
+            data: [5755, 183, 135, 41, 62, 2837, 1534],
+            backgroundColor: ['#38bdf8', '#fbbf24', '#f59e0b', '#d97706', '#b45309', '#34d399', '#ef4444'],
+            borderWidth: 1,
+            borderColor: '#161b22'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } }
+          },
+          cutout: '65%'
+        }
+      });
+
+      // 2. Speed Distribution Histogram & CDF Line
+      const ctx2 = document.getElementById('chart-speed').getContext('2d');
+      new Chart(ctx2, {
+        type: 'bar',
+        data: {
+          labels: ['0-10', '10-20', '20-30', '30-40', '40-50', '50-60', '60-70', '>70'],
+          datasets: [{
+            label: 'Jumlah Kendaraan',
+            data: [6420, 1830, 950, 680, 420, 150, 60, 37],
+            backgroundColor: '#3b82f6',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { grid: { color: '#21262d' } },
+            x: { grid: { display: false } }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+
+      // 3. Hourly Profile (24-Hour Line Chart)
+      const ctx3 = document.getElementById('chart-hourly').getContext('2d');
+      const hours = Array.from({length: 24}, (_, i) => `${String(i).padStart(2, '0')}:00`);
+      const hourlyVolume = [45, 25, 18, 12, 35, 95, 280, 540, 620, 490, 430, 480, 510, 470, 520, 590, 710, 780, 640, 460, 340, 230, 140, 80];
+      new Chart(ctx3, {
+        type: 'line',
+        data: {
+          labels: hours,
+          datasets: [{
+            label: 'Volume Kendaraan (smp/jam)',
+            data: hourlyVolume,
+            borderColor: '#a855f7',
+            backgroundColor: 'rgba(168, 85, 247, 0.1)',
+            fill: true,
+            tension: 0.35,
+            pointRadius: 2,
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { grid: { color: '#21262d' } },
+            x: { grid: { color: '#21262d' }, ticks: { maxTicksLimit: 12 } }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+
+      // 4. Comparative Bar Chart (Sudirman vs MBK vs Unila)
+      const ctx4 = document.getElementById('chart-comparison').getContext('2d');
+      new Chart(ctx4, {
+        type: 'bar',
+        data: {
+          labels: ['Volume (ratusan)', 'Kecepatan Rerata (km/h)', 'Kepatuhan Helm (%)', 'Insiden'],
+          datasets: [
+            { label: 'Sudirman (ID 282)', data: [47.3, 8.6, 64.9, 164], backgroundColor: '#38bdf8', borderRadius: 4 },
+            { label: 'Flyover MBK (ID 190)', data: [43.1, 41.2, 82.5, 285], backgroundColor: '#a855f7', borderRadius: 4 },
+            { label: 'Underpass Unila (ID 312)', data: [14.9, 46.5, 91.2, 82], backgroundColor: '#34d399', borderRadius: 4 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { grid: { color: '#21262d' } },
+            x: { grid: { display: false } }
+          },
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
