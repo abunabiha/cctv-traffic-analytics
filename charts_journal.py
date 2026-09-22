@@ -6,7 +6,7 @@ Menganalisis data telemetri lalu lintas dan insiden CCTV Underpass Unila & Simpa
 """
 
 from datetime import datetime, date
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 import numpy as np
 import pandas as pd
 import streamlit as st

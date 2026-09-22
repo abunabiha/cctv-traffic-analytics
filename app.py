@@ -9,10 +9,9 @@ import os
 import time
 import importlib
 from datetime import datetime, date, timedelta
-from typing import Optional, List, Dict, Any, Tuple
+from typing import Optional, Tuple
 import numpy as np
 import pandas as pd
-from PIL import Image
 import streamlit as st
 
 import detector

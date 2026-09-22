@@ -16,7 +16,7 @@ import queue
 import threading
 import urllib.request
 import http.cookiejar
-from typing import Dict, Generator, Optional, Tuple
+from typing import Dict, Optional, Tuple
 import cv2
 import numpy as np
 

@@ -18,7 +18,6 @@ import time
 from collections import deque
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
-import cv2
 import numpy as np
 
 

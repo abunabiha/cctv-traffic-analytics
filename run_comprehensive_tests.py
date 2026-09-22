@@ -8,19 +8,18 @@ Suite Pengujian Terpadu Otomatis (Automated Testing Suite):
 """
 
 import os
-import sys
 import time
 import shutil
 import unittest
 from datetime import datetime, date, timedelta
-from typing import Tuple, Dict, Any, List
+from typing import Tuple
 import numpy as np
 import pandas as pd
 import cv2
 
 # Import modul internal sistem
 from speed_estimator import SpeedEstimator
-from detector import classify_vehicle_indonesia, detect_helmet_heuristic, DEFAULT_ROAD_ROI
+from detector import classify_vehicle_indonesia, detect_helmet_heuristic
 from anomaly_detector import SmartAnomalyDetector
 from data_logger import TrafficDataLogger
 

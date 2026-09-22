@@ -11,7 +11,7 @@ import time
 import numpy as np
 import cv2
 from speed_estimator import SpeedEstimator
-from detector import VehicleDetector, DEFAULT_ROAD_ROI
+from detector import VehicleDetector
 from anomaly_detector import SmartAnomalyDetector
 from pipeline import UnderpassAnalyticsPipeline
 
@@ -62,7 +62,7 @@ def test_anomaly_detection_rules():
 
     # --- Skenario B: Kendaraan Lawan Arah ---
     print("  -> Skenario B: Uji Kendaraan Lawan Arah (Mundur / Berlawanan)...")
-    detector_ww = SmartAnomalyDetector(fps=25.0)
+    detector_ww = SmartAnomalyDetector(fps=25.0, location="unila")
     alerts_ww = []
     t_start = 200.0
     for step in range(10):

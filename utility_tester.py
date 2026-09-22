@@ -13,13 +13,12 @@ import os
 import io
 import time
 import json
-from datetime import datetime, date, timedelta
-from typing import Dict, Any, List, Tuple, Optional
+from datetime import datetime, date
+from typing import Dict, Any, List
 
 import streamlit as st
 import pandas as pd
 import numpy as np
-import cv2
 
 try:
     from detector import classify_vehicle_indonesia
@@ -40,10 +39,7 @@ except ImportError:
                 else: return "Golongan V", "Truk 5+ Gandar", "Truk 5+ Gandar"
             return "Golongan I", "Kendaraan Umum", "Lainnya"
 
-from speed_estimator import (
-    SpeedEstimator, UNILA_SRC_POINTS, UNILA_DST_POINTS,
-    SUDIRMAN_SRC_POINTS, SUDIRMAN_DST_POINTS, MBK_SRC_POINTS, MBK_DST_POINTS
-)
+from speed_estimator import SpeedEstimator
 
 
 # Daftar 24 Kolom Standar Telemetri

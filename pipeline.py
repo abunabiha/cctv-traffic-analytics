@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Tuple
 import cv2
 import numpy as np
 
-from detector import VehicleDetector, GOLONGAN_COLORS, DEFAULT_ROAD_ROI
+from detector import VehicleDetector, GOLONGAN_COLORS
 from speed_estimator import SpeedEstimator
 from anomaly_detector import SmartAnomalyDetector
 from data_logger import TrafficDataLogger

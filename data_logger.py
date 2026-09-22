@@ -7,7 +7,7 @@ dengan dukungan Penggolongan Kendaraan Indonesia (Golongan I s.d. Golongan VI).
 import os
 import csv
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 import pandas as pd
 
 
